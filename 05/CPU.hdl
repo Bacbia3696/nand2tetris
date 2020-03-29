@@ -40,4 +40,42 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+
+    // decode
+    Or16 (a=instruction, out[15]=instructionType, out[0..14]=memAddress,
+        out[0]=j3, out[1]=j2, out[2]=j1, out[3]=d3, out[4]=d2, out[5]=d1,
+        out[6]=c6, out[7]=c5, out[8]=c4, out[9]=c3, out[10]=c2, out[11]=c1, out[12]=a);
+
+    Mux16 (a[0..14]=memAddress, b=outALU, sel=instructionType, out=address);
+    Not (in=instructionType, out=notInstructionType);
+    Or (a=notInstructionType, b=d1, out=loadA);
+
+    // Write to A register
+    ARegister (in=address, load=loadA, out=outA, out[0..14]=addressM);
+
+    Mux16 (a=outA, b=inM, sel=a, out=AOrM);
+
+    // Write to D register
+    And (a=d2, b=instructionType, out=writeD);
+    DRegister (in=outALU, load=writeD, out=outD);
+
+    ALU (x=outD, y=AOrM, zx=c1, nx=c2, zy=c3, ny=c4, f=c5, no=c6, out=outM, out=outALU, zr=zr, ng=ng);
+
+    Or (a=ng, b=zr, out=tpp);
+    Not (in=tpp, out=po);
+
+    And (a=ng, b=j1, out=o1);
+    And (a=zr, b=j2, out=o2);
+    And (a=po, b=j3, out=o3);
+    Or (a=o1, b=o2, out=o4);
+    Or (a=o4, b=o3, out=o);
+
+    And (a=o, b=instructionType, out=jump);
+
+    Or (a=jump, b=reset, out=tp);
+    Not (in=tp, out=inc);
+    PC (in=outA, load=jump, inc=inc, reset=reset, out[0..14]=pc);
+
+    // Write to M register
+    And (a=d3, b=instructionType, out=writeM);
 }
